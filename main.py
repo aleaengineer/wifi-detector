@@ -5,7 +5,7 @@ from rich.text import Text
 import wifi_scanner
 from history import history
 
-SCAN_INTERVAL = 3
+SCAN_INTERVAL = 1
 
 class StatusBar(Static):
     connected = reactive("")
