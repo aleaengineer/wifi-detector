@@ -3,6 +3,7 @@ from textual.widgets import Header, Static, DataTable
 from textual.reactive import reactive
 from rich.text import Text
 import wifi_scanner
+from history import history
 
 SCAN_INTERVAL = 3
 
@@ -27,7 +28,7 @@ class StatusBar(Static):
 
 class NetworkTable(DataTable):
     def on_mount(self):
-        self.add_columns("SSID", "BSSID", "Ch", "Band", "Sinyal", "Keamanan", "dBm")
+        self.add_columns("SSID", "BSSID", "Ch", "Band", "Sinyal", "Tren", "Riwayat", "Keamanan", "dBm")
 
     def refresh_networks(self, networks):
         self.clear()
@@ -46,12 +47,18 @@ class NetworkTable(DataTable):
             empty = "░" * (20 - pct // 5)
             bar = Text(f"{filled}{empty} {pct:.0f}%", style=color)
 
+            trend_char, trend_color = history.trend(bssid)
+            spark = history.sparkline(bssid, width=8)
+
             ssid_text = Text(ssid, style="bold")
             level_text = Text(level, style=color)
             band_text = Text(band, style="dim white")
             ch_text = Text(channel, style="dim white")
+            trend_text = Text(trend_char, style=trend_color)
+            spark_text = Text(spark, style="dim white")
 
-            self.add_row(ssid_text, bssid, ch_text, band_text, bar, security, str(rssi))
+            self.add_row(ssid_text, bssid, ch_text, band_text, bar,
+                        trend_text, spark_text, security, str(rssi))
 
 class WifiDetector(App):
     TITLE = "WiFi Signal Detector"
@@ -74,6 +81,8 @@ class WifiDetector(App):
     def do_scan(self):
         connected = wifi_scanner.get_connected()
         networks = wifi_scanner.scan()
+
+        history.record_scan(networks)
 
         status_bar = self.query_one(StatusBar)
         status_bar.connected = connected or ""
