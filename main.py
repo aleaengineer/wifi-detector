@@ -4,6 +4,8 @@ from textual.reactive import reactive
 from rich.text import Text
 import wifi_scanner
 
+SCAN_INTERVAL = 3
+
 class StatusBar(Static):
     connected = reactive("")
     count = reactive(0)
@@ -20,12 +22,12 @@ class StatusBar(Static):
             text.append(f"Terhubung: {self.connected}", style="green bold")
         else:
             text.append("Tidak terhubung", style="red")
-        text.append(f"  |  {self.count} jaringan ditemukan", style="white")
+        text.append(f"  |  {self.count} jaringan  |  scan {SCAN_INTERVAL}s", style="white")
         self.update(text)
 
 class NetworkTable(DataTable):
     def on_mount(self):
-        self.add_columns("SSID", "BSSID", "Sinyal", "Level", "dBm")
+        self.add_columns("SSID", "BSSID", "Ch", "Band", "Sinyal", "Keamanan", "dBm")
 
     def refresh_networks(self, networks):
         self.clear()
@@ -35,6 +37,9 @@ class NetworkTable(DataTable):
             rssi = net.get("rssi", 0)
             level = net.get("level", "N/A")
             pct = net.get("pct", 0)
+            channel = str(net.get("channel", "?"))
+            band = net.get("band", "?")
+            security = net.get("security", "?")
             color = {"Kuat": "green", "Sedang": "yellow", "Lemah": "red"}.get(level, "white")
 
             filled = "█" * (pct // 5)
@@ -43,8 +48,10 @@ class NetworkTable(DataTable):
 
             ssid_text = Text(ssid, style="bold")
             level_text = Text(level, style=color)
+            band_text = Text(band, style="dim white")
+            ch_text = Text(channel, style="dim white")
 
-            self.add_row(ssid_text, bssid, bar, level_text, str(rssi))
+            self.add_row(ssid_text, bssid, ch_text, band_text, bar, security, str(rssi))
 
 class WifiDetector(App):
     TITLE = "WiFi Signal Detector"
@@ -61,7 +68,7 @@ class WifiDetector(App):
         yield StatusBar()
 
     def on_mount(self):
-        self.set_interval(5, self.do_scan)
+        self.set_interval(SCAN_INTERVAL, self.do_scan)
         self.do_scan()
 
     def do_scan(self):
